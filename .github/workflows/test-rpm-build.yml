@@ -1,0 +1,70 @@
+name: Test RPM Build Reusable Workflow
+
+env:
+  # TODO: we really need to define a list of supported versions (ideally it's no more than 2)
+  #       build is done on the lowest version and test on the highest with a "sanity test"
+  #       stage done on all versions in the list ecept the highest
+  EL8_BUILD_VERSION: 8.6
+  EL8_VERSION: 8.8
+  EL9_BUILD_VERSION: 9
+  EL9_VERSION: 9
+  LEAP15_VERSION: 15.5
+  # Which distros to build for
+  DISTROS: el8 el9 leap15
+  PACKAGING_DIR: .
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    paths:
+      - .github/workflows/rpm-build.yml
+      - .github/workflows/test-rpm-build.yml
+
+concurrency:
+  group: test-rpm-build-${{ github.head_ref  || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -ueo pipefail {0}
+
+permissions: {}
+
+jobs:
+  Variables:
+    # What a dumb jobs this is
+    # Needed because of https://github.com/orgs/community/discussions/26671
+    # Ideally want to be able to use:
+    # with:
+    #    NAME: ${{ env.DISTROS }}
+    # in the Call-RPM-Build job but the above issue prevents it
+    name: Compute outputs
+    runs-on: [self-hosted, light]
+    outputs:
+      DISTROS: ${{ env.DISTROS }}
+      EL8_BUILD_VERSION: ${{ env.EL8_BUILD_VERSION }}
+      EL9_BUILD_VERSION: ${{ env.EL9_BUILD_VERSION }}
+      LEAP15_VERSION: ${{ env.LEAP15_VERSION }}
+      PACKAGING_DIR: ${{ env.PACKAGING_DIR }}
+    steps:
+      - name: Make outputs from env variables
+        run: echo "Make outputs from env variables"
+
+  Call-RPM-Build:
+    name: Build RPM
+    needs: Variables
+    permissions:
+      statuses: write
+    uses: ./.github/workflows/rpm-build.yml
+    secrets: inherit
+    with:
+      NAME: argobots
+      DISTROS: ${{ needs.Variables.outputs.DISTROS }}
+      EL8_BUILD_VERSION: ${{ needs.Variables.outputs.EL8_BUILD_VERSION }}
+      EL9_BUILD_VERSION: ${{ needs.Variables.outputs.EL9_BUILD_VERSION }}
+      LEAP15_VERSION: ${{ needs.Variables.outputs.LEAP15_VERSION }}
+      PACKAGING_DIR: ${{ needs.Variables.outputs.PACKAGING_DIR }}
+      UPDATE_PACKAGING: true
+      BRANCH: master
