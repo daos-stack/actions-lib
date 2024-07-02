@@ -1,0 +1,438 @@
+name: RPM Build
+
+on:
+  workflow_call:
+    inputs:
+      NAME:
+        type: string
+        required: true
+      DISTROS:
+        type: string
+        required: true
+      EL8_BUILD_VERSION:
+        type: string
+        required: true
+      EL9_BUILD_VERSION:
+        type: string
+        required: true
+      LEAP15_VERSION:
+        type: string
+        required: true
+      COVFN_DISABLED:
+        type: boolean
+        default: true
+      PACKAGING_DIR:
+        type: string
+        required: true
+      # allow the caller to decide to run in GHA or not
+      RUN_GHA:
+        type: boolean
+        default: false
+      # these are mainly used for self-testing
+      BRANCH:
+        type: string
+        description: "The branch of the project to build (normally empty to build the current project)"
+        required: false
+      UPDATE_PACKAGING:
+        type: boolean
+        description: "Whether to update the packaging/ dir (primarily used for self-testing)"
+        default: false
+        required: false
+    outputs:
+      rpm-test-version:
+        value: ${{ jobs.Import-commit-pragmas.outputs.rpm-test-version }}
+      pr-repos:
+        value: ${{ jobs.Import-commit-pragmas.outputs.pr-repos }}
+      run-gha:
+        value: ${{ jobs.Import-commit-pragmas.outputs.run-gha }}
+      skip-build:
+        value: ${{ jobs.Import-commit-pragmas.outputs.skip-build }}
+      commit-message:
+        value: ${{ jobs.Import-commit-message.outputs.message }}
+      dequoted-commit-message:
+        value: ${{ jobs.Import-commit-message.outputs.dequoted-message }}
+
+jobs:
+  # it's a real shame that this step is even needed.  push events have the commit message in
+  # ${{ github.event.head_commit.message }} but pull_requests don't.  :-(
+  Import-commit-message:
+    name: Get commit message
+    runs-on: [self-hosted, light]
+    # Map a step output to a job output
+    outputs:
+      message: ${{ steps.commit_message.outputs.text }}
+      dequoted-message: ${{ steps.dequoted_commit_message.outputs.text }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Import Commit Message
+        id: commit_message
+        run: exec >> $GITHUB_OUTPUT;
+             echo 'text<<EOF';
+             if [ -n '${{ inputs.commit-message }}' ]; then
+                 echo '${{ inputs.commit-message }}';
+             else
+                 git show -s --format=%B;
+             fi;
+             echo 'EOF'
+      - name: Import and Dequote Commit Message
+        id: dequoted_commit_message
+        run: |
+             exec >> $GITHUB_OUTPUT
+             # it's tempting to use the previous step's output as such:
+             # echo '$ {{ steps.commit_message.outputs.text }}' | escape_single_quotes;
+             # below, instead of using git again, but if that commit message has a ' in it,
+             # (which we are trying to escape here) it will cause a sh parsing error here
+             echo 'text<<EOF'
+             git show -s --format=%B | sed -e "s/'/'\"'\"'/g"
+             echo 'EOF'
+
+  Import-commit-pragmas:
+    name: Make commit pragma variables
+    runs-on: [self-hosted, light]
+    needs: [Import-commit-message]
+    # Map a step output to a job output
+    outputs:
+      rpm-test-version: ${{ steps.rpm-test-version.outputs.value }}
+      pr-repos: ${{ steps.pr-repos.outputs.value }}
+      run-gha: ${{ steps.run-gha.outputs.value }}
+      skip-build: ${{ steps.skip-build.outputs.value }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set rpm-test-version variable
+        id: rpm-test-version
+        uses: daos-stack/action-variable-from-pragma@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          pragma: RPM_TEST_VERSION
+      - name: Set pr-repos variable
+        id: pr-repos
+        uses: daos-stack/action-variable-from-pragma@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          pragma: PR_REPOS
+      - name: Set run-gha variable
+        id: run-gha
+        uses: daos-stack/action-variable-from-pragma@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          pragma: RUN_GHA
+          default: false
+      - name: Set skip-build variable
+        id: skip-build
+        uses: daos-stack/action-variable-from-pragma@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          pragma: SKIP_BUILD
+
+  Create-symlinks:
+    # you might think this is an odd place to do this and it should be done as a result of the
+    # build and/or testing stages and ideally you'd be right.
+    # the problem with that is that there is no way to get the success/fail result of individual
+    # axes of matrix jobs so there is no way to query them at the end and see their composite
+    # results.
+    # instead, the final result of the Build-RPM job, for example is a last-one-complete wins.
+    # so for example, if the el9 axis fails quickly and then the el8 axis succeeds afterward the
+    # resulting job state is success.
+    # instead we assume success at the beginning and then let any axis that fails remove the
+    # lastSuccessfulBuild link if it fails
+    name: Create lastBuild and lastSuccessfulBuild symlinks
+    runs-on: [self-hosted, light]
+    needs: [Import-commit-pragmas]
+    if: |
+         (inputs.BRANCH != '' ||
+          needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
+          inputs.RUN_GHA ||
+          github.event_name == 'workflow_dispatch') &&
+         needs.Import-commit-pragmas.outputs.rpm-test-version == '' &&
+         (!contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME)))
+    env:
+      # TODO -- this should be on stable, backedup storage, not /scratch
+      # yamllint disable-line rule:line-length
+      REPO_PATH: /scratch/job_repos/daos-stack/job/${{ inputs.NAME }}/job/PR-${{ github.event.pull_request.number }}/
+    steps:
+      # do we actually need a checkout here?
+      # - name: Checkout code
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: ${{ github.event.pull_request.head.sha }}
+      - name: Create lastBuild and lastSuccessfulBuild symlinks
+        run: |
+             mkdir -p ${REPO_PATH}
+             rm -f ${REPO_PATH}last{,Successful}Build
+             ln -s ${{ github.run_number }} ${REPO_PATH}lastBuild
+             ln -s ${{ github.run_number }} ${REPO_PATH}lastSuccessfulBuild
+
+  Calc-rpm-build-matrix:
+    name: Calculate RPM Build Matrix
+    runs-on: [self-hosted, wolf]
+    needs: [Import-commit-pragmas, Create-symlinks, Import-commit-message]
+    if: |
+        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        needs.Import-commit-pragmas.outputs.skip-build != 'true'
+    outputs:
+      distros: ${{ steps.distros.outputs.text }}
+      matrix: ${{ steps.matrix.outputs.text }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Import commit pragmas
+        uses: daos-stack/action-import-commit-pragmas@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+      - name: Calculate RPM Build Distros
+        id: distros
+        run: |  # do not use the non-| format for this script
+             l=()
+             trap 'echo "text=${l[*]}" >> $GITHUB_OUTPUT; \
+                   cat $GITHUB_OUTPUT' EXIT
+             if ${CP_SKIP_BUILD:-false}; then
+                 exit 0
+             fi
+             distros=(${{ inputs.DISTROS }})
+             if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
+                 l+=(el8)
+             fi
+             if ! ${CP_SKIP_BUILD_EL9_RPM:-false} && [[ ${distros[@]} =~ el9 ]]; then
+                 l+=(el9)
+             fi
+             if ! ${CP_SKIP_BUILD_LEAP15_RPM:-false} && [[ ${distros[@]} =~ leap15 ]]; then
+                 l+=(leap15)
+             fi
+      - name: Calculate RPM Build Matrix
+        id: matrix
+        # TODO: make this consume the previous step's output
+        run: |  # do not use the non-| format for this script
+             l=()
+             trap 'echo "text=[$(IFS=","; echo "${l[*]}")]" >> $GITHUB_OUTPUT; \
+                   cat $GITHUB_OUTPUT' EXIT
+             if ${CP_SKIP_BUILD:-false}; then
+                 exit 0
+             fi
+             distros=(${{ inputs.DISTROS }})
+             if ! ${CP_SKIP_BUILD_EL8_RPM:-false} && [[ ${distros[@]} =~ el8 ]]; then
+                 l+=('"el8"')
+             fi
+             if ! ${CP_SKIP_BUILD_EL9_RPM:-false} && [[ ${distros[@]} =~ el9 ]]; then
+                 l+=('"el9"')
+             fi
+             if ! ${CP_SKIP_BUILD_LEAP15_RPM:-false} && [[ ${distros[@]} =~ leap15 ]]; then
+                 l+=('"leap15"')
+             fi
+
+  Build-RPM:
+    name: Build RPM
+    permissions:
+      statuses: write
+    runs-on: [self-hosted, docker]
+    needs: [Create-symlinks, Import-commit-pragmas, Calc-rpm-build-matrix,
+            Import-commit-message]
+    strategy:
+      matrix:
+        distro: ${{ fromJSON(needs.Calc-rpm-build-matrix.outputs.matrix) }}
+      fail-fast: false
+    if: |
+        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        needs.Create-symlinks.result == 'success' &&
+        ((!cancelled()) || success() || failure())
+    env:
+      ARTIFACTORY_URL: https://artifactory.dc.hpdd.intel.com/
+      DAOS_EMAIL: brian.murrell@intel.com
+      DAOS_FULLNAME: daos-stack
+      DISTRO: ${{ matrix.distro }}
+      DISTRO_REPOS: disabled
+      DOCKER_BUILDKIT: 0
+      JENKINS_URL: https://build.hpdd.intel.com/
+      ARTIFACTS_URL: file:///scratch/job_repos/
+      MOCK_OPTIONS: --uniqueext=${{ github.run_id }}
+      PR_NUM: ${{ github.event.pull_request.number }}
+      # TODO -- this should be on stable, backedup storage, not /scratch
+      # yamllint disable-line rule:line-length
+      REPO_PATH: /scratch/job_repos/daos-stack/job/${{ inputs.NAME }}/job/PR-${{ github.event.pull_request.number }}/
+      REPO_FILE_URL: https://artifactory.dc.hpdd.intel.com/artifactory/repo-files/
+      RUN_ID: ${{ github.run_id }}
+      TARGET: ${{ matrix.distro }}
+      # keep VS Code's GHA linting happy
+      STAGE_NAME:
+      DISTRO_NAME:
+      DISTRO_VERSION:
+      CP_LEAP15_VERSION:
+      COMMIT_STATUS_DISTRO_VERSION:
+      FVERSION:
+      CHROOT_NAME:
+      ACT:
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: daos-stack/${{ inputs.NAME }}
+          ref: ${{ inputs.BRANCH && inputs.BRANCH || github.event.pull_request.head.sha }}
+      - name: Update packaging/ if requested
+        if: inputs.UPDATE_PACKAGING
+        uses: actions/checkout@v4
+        with:
+          repository: daos-stack/packaging
+          path: packaging
+      - name: Import commit pragmas
+        uses: daos-stack/action-import-commit-pragmas@v1
+        with:
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+      - name: Set variables
+        run: |
+            FVERSION="37"
+            case ${{ matrix.distro }} in
+                'el8')
+                    CHROOT_NAME="rocky+epel-8-x86_64"
+                    DISTRO_NAME="EL"
+                    DISTRO_VERSION='${{ inputs.EL8_BUILD_VERSION }}'
+                    COMMIT_STATUS_DISTRO_VERSION="8"
+                    ;;
+                'el9')
+                    CHROOT_NAME="rocky+epel-9-x86_64"
+                    DISTRO_NAME="EL"
+                    DISTRO_VERSION='${{ inputs.EL9_BUILD_VERSION }}'
+                    ;;
+                'leap15')
+                    CHROOT_NAME='opensuse-leap-${{ env.CP_LEAP15_VERSION &&
+                                                   env.CP_LEAP15_VERSION ||
+                                                   inputs.LEAP15_VERSION }}-x86_64'
+                    DISTRO_NAME="Leap"
+                    DISTRO_VERSION='${{ env.CP_LEAP15_VERSION &&
+                                        env.CP_LEAP15_VERSION || inputs.LEAP15_VERSION }}'
+                    ;;
+            esac
+            echo "CHROOT_NAME=$CHROOT_NAME" >> $GITHUB_ENV
+            echo "DISTRO_NAME=$DISTRO_NAME" >> $GITHUB_ENV
+            echo "DISTRO_VERSION=$DISTRO_VERSION" >> $GITHUB_ENV
+            echo "BUILD_CHROOT=/var/lib/mock/$CHROOT_NAME-"'${{ github.run_id }}/' >> $GITHUB_ENV
+            echo "STAGE_NAME=Build RPM on $DISTRO_NAME $DISTRO_VERSION" >> $GITHUB_ENV
+            echo "FVERSION=$FVERSION" >> $GITHUB_ENV
+            echo "COMMIT_STATUS_DISTRO_VERSION=$COMMIT_STATUS_DISTRO_VERSION" >> $GITHUB_ENV
+      - name: Build RPM Docker image
+        id: build-rpm-docker-image
+        continue-on-error: true
+        run: |
+             set -eux
+             if "${ACT:-false}" && command -v podman; then
+                 DOCKER=podman
+             else
+                 DOCKER=docker
+             fi
+             "$DOCKER" build --file ${{ inputs.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild \
+                             --build-arg CACHEBUST=$(date +%s%3N)                              \
+                             --build-arg CB0=$(date +%V)                                       \
+                             --build-arg REPO_FILE_URL=$REPO_FILE_URL                          \
+                             --build-arg UID=$(id -u)                                          \
+                             --build-arg FVERSION=${{ env.FVERSION }}                          \
+                             --tag mock-build                                                  \
+                            ${{ inputs.PACKAGING_DIR }}
+      - name: Build RPM
+        id: build-rpm
+        continue-on-error: true
+        # yamllint disable rule:line-length
+        run: |
+             set -eux
+             rm -rf mock_result/${CHROOT_NAME}
+             mkdir -p mock_result/${CHROOT_NAME}
+             if [ -e ci/rpm/build.sh ]; then
+                 script="ci/rpm/build.sh"
+             else
+                 script="set -eux; echo \"In docker I am \$(id)\"
+                         if ! rm -rf artifacts/$TARGET/ ||
+                            ! mkdir -p artifacts/$TARGET/; then
+                             echo \"Failed to create artifacts/$TARGET/\"
+                             exit 1
+                         fi
+                         make CHROOT_NAME=\"$CHROOT_NAME\"                    \
+                              DISTRO_VERSION=\"$DISTRO_VERSION\" chrootbuild"
+             fi
+             if [ -z "${{ github.run_attempt }}" ] ||
+                [ "${{ github.run_attempt }}" = '""' ]; then
+                 # probably running in act
+                 unique="$RANDOM"
+             else
+                 unique="${{ github.run_id }}-${{ github.run_attempt }}"
+             fi
+             if "${ACT:-false}" && command -v podman; then
+                 DOCKER=podman
+             else
+                 DOCKER=docker
+                 # TODO: determine why we cannot use this with podman
+                 docker_args=(--user build)
+             fi
+             "$DOCKER" run --name mock-build-"$unique"-${{ matrix.distro }}                       \
+                           "${docker_args[@]}"                                                    \
+                           --rm                                                                   \
+                           -v "$PWD":"$PWD" -w "$PWD"                                             \
+                           -v "$PWD"/mock_result/${CHROOT_NAME}:/var/lib/mock/$CHROOT_NAME/result \
+                           -v /scratch:/scratch                                                   \
+                           --privileged=true                                                      \
+                           -e DAOS_FULLNAME="$DAOS_FULLNAME"                                      \
+                           -e DAOS_EMAIL="$DAOS_EMAIL"                                            \
+                           -e DISTRO_VERSION="$DISTRO_VERSION"                                    \
+                           -e STAGE_NAME="$STAGE_NAME"                                            \
+                           -e CHROOT_NAME="$CHROOT_NAME"                                          \
+                           -e ARTIFACTORY_URL="$ARTIFACTORY_URL"                                  \
+                           -e REPO_FILE_URL="$REPO_FILE_URL"                                      \
+                           -e JENKINS_URL="$JENKINS_URL"                                          \
+                           -e TARGET="$TARGET"                                                    \
+                           -e COVFN_DISABLED="${{ inputs.COVFN_DISABLED }}"                       \
+                           mock-build bash -c "$script"
+        # yamllint enable rule:line-length
+      - name: Build RPM failure log
+        id: build-rpm-fail-log
+        continue-on-error: true
+        if: steps.build-rpm.outcome != 'success'
+        run: cat mock_result/${CHROOT_NAME}/root.log;
+             cat mock_result/${CHROOT_NAME}/build.log
+      - name: Save RPM build logs
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.STAGE_NAME }} logs
+          path: |
+            mock_result/${{ env.CHROOT_NAME }}/root.log
+            mock_result/${{ env.CHROOT_NAME }}/build.log
+      - name: Create repo
+        id: create-repo
+        if: steps.build-rpm.outcome == 'success'
+        continue-on-error: true
+        run: |
+             set -eux
+             repo_path="$REPO_PATH$GITHUB_RUN_NUMBER/artifact/artifacts/${{ !inputs.COVFN_DISABLED && 'bullseye/' || '' }}"
+             mkdir -p "$repo_path$TARGET"
+             cp -a mock_result/${CHROOT_NAME}/*.rpm "$repo_path$TARGET"
+             cd "$repo_path$TARGET"
+             createrepo .
+      - name: Test repo
+        id: test-repo
+        if: steps.create-repo.outcome == 'success'
+        continue-on-error: true
+        run: |
+             dnf --disablerepo=\* --repofrompath                                                                                             \
+                 testrepo,file://${REPO_PATH}${{ github.run_number }}/artifact/artifacts/${{ !inputs.COVFN_DISABLED && 'bullseye/' || '' }}$TARGET \
+                 repoquery -a
+      - name: Remove lastSuccessfulBuild link and exit failure
+        if: steps.test-repo.outcome != 'success'
+        run: rm -f ${REPO_PATH}lastSuccessfulBuild;
+             exit 1
+        # We can't actually do this due to SDL requirements
+        # - name: Publish RPMs
+        #   uses: actions/upload-artifact@v4
+        #   with:
+        #     name: ${{ env.DISTRO_NAME }} ${{ env.DISTRO_VERSION }} RPM repository
+        #     path: ${{ env.REPO_PATH}}${{ github.run_number }}/artifact/artifacts/${{ env.TARGET }}
+      - name: Update commit status
+        if: contains(fromJson('["push", "pull_request"]'), github.event_name) && !env.ACT
+        uses: ouzi-dev/commit-status-updater@v2
+        with:
+          # yamllint disable-line rule:line-length
+          name: 'build/Build RPM on ${{ env.DISTRO_NAME }} ${{ env.COMMIT_STATUS_DISTRO_VERSION && env.COMMIT_STATUS_DISTRO_VERSION || env.DISTRO_VERSION }}'
+          status: "${{ job.status }}"
