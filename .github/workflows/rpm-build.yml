@@ -103,28 +103,28 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Set rpm-test-version variable
         id: rpm-test-version
-        uses: daos-stack/action-variable-from-pragma@bmurrell/initial
+        uses: daos-stack/action-variable-from-pragma@v1
         with:
-          commit_message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
           pragma: RPM_TEST_VERSION
       - name: Set pr-repos variable
         id: pr-repos
-        uses: daos-stack/action-variable-from-pragma@bmurrell/initial
+        uses: daos-stack/action-variable-from-pragma@v1
         with:
-          commit_message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
           pragma: PR_REPOS
       - name: Set run-gha variable
         id: run-gha
-        uses: daos-stack/action-variable-from-pragma@bmurrell/initial
+        uses: daos-stack/action-variable-from-pragma@v1
         with:
-          commit_message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
           pragma: RUN_GHA
           default: false
       - name: Set skip-build variable
         id: skip-build
-        uses: daos-stack/action-variable-from-pragma@bmurrell/initial
+        uses: daos-stack/action-variable-from-pragma@v1
         with:
-          commit_message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
+          commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
           pragma: SKIP_BUILD
 
   Show-Create-Symlinks-Conditionals:
@@ -231,7 +231,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Import commit pragmas
-        uses: daos-stack/action-import-commit-pragmas@bmurrell/initial
+        uses: daos-stack/action-import-commit-pragmas@v1
         with:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
       - name: Calculate RPM Build Distros
@@ -342,7 +342,7 @@ jobs:
           repository: daos-stack/packaging
           path: packaging
       - name: Import commit pragmas
-        uses: daos-stack/action-import-commit-pragmas@bmurrell/initial
+        uses: daos-stack/action-import-commit-pragmas@v1
         with:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
       - name: Set variables
