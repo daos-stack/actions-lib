@@ -127,39 +127,6 @@ jobs:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
           pragma: SKIP_BUILD
 
-  Show-Create-Symlinks-Conditionals:
-    name: Show Create Symlinks Conditionals
-    runs-on: [self-hosted, docker]
-    needs: [Import-commit-pragmas]
-    if: |
-         (inputs.BRANCH != '' ||
-          needs.Import-commit-pragmas.outputs.run-gha ||
-          inputs.RUN_GHA ||
-          github.event_name == 'workflow_dispatch') &&
-         needs.Import-commit-pragmas.outputs.rpm-test-version == '' &&
-         (!contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME)))
-    steps:
-      - name: Show Create Symlinks Conditionals
-        run: |
-             echo "(${{ inputs.BRANCH != '' }} || "
-             echo " ${{ needs.Import-commit-pragmas.outputs.run-gha }} || "
-             echo " ${{ inputs.RUN_GHA }} || "
-             echo " '${{ github.event_name }}' == 'workflow_dispatch') == ${{
-                       (inputs.BRANCH != '' ||
-                        needs.Import-commit-pragmas.outputs.run-gha ||
-                        inputs.RUN_GHA == 'true' ||
-                        github.event_name == 'workflow_dispatch') }}"
-             echo "contains: ${{ contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME)) }}"
-             echo "contains hard-coded: ${{ contains(needs.Import-commit-pragmas.outputs.pr-repos, 'argobots@') }}"
-             echo "pr-repos: ${{ needs.Import-commit-pragmas.outputs.pr-repos }}"
-             echo "Overall result: ${{ (inputs.BRANCH != '' ||
-                   needs.Import-commit-pragmas.outputs.run-gha ||
-                   inputs.RUN_GHA ||
-                   github.event_name == 'workflow_dispatch') &&
-                  needs.Import-commit-pragmas.outputs.rpm-test-version == '' &&
-                  (!contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME))) }}"
-             echo "inputs.NAME: ${{ format('{0}@', inputs.NAME) }}"
-
   Create-symlinks:
     # you might think this is an odd place to do this and it should be done as a result of the
     # build and/or testing stages and ideally you'd be right.
@@ -174,7 +141,6 @@ jobs:
     name: Create lastBuild and lastSuccessfulBuild symlinks
     runs-on: [self-hosted, light]
     needs: [Import-commit-pragmas]
-    # TODO: figure out how to have an @ after inputs.NAME 7 lines down
     if: |
          (inputs.BRANCH != '' ||
           needs.Import-commit-pragmas.outputs.run-gha ||
@@ -187,24 +153,6 @@ jobs:
       # yamllint disable-line rule:line-length
       REPO_PATH: /scratch/job_repos/daos-stack/job/${{ inputs.NAME }}/job/PR-${{ github.event.pull_request.number }}/
     steps:
-      - name: Show Create Symlinks Conditionals
-        run: |
-             echo "(${{ inputs.BRANCH != '' }} || "
-             echo " ${{ needs.Import-commit-pragmas.outputs.run-gha }} || "
-             echo " ${{ inputs.RUN_GHA }} || "
-             echo " '${{ github.event_name }}' == 'workflow_dispatch') == ${{
-                     (inputs.BRANCH != '' ||
-                      needs.Import-commit-pragmas.outputs.run-gha ||
-                      inputs.RUN_GHA ||
-                      github.event_name == 'workflow_dispatch') }}"
-             echo "Overall: ${{ (inputs.BRANCH != '' ||
-                                 needs.Import-commit-pragmas.outputs.run-gha ||
-                                 inputs.RUN_GHA ||
-                                 github.event_name == 'workflow_dispatch') &&
-                                needs.Import-commit-pragmas.outputs.rpm-test-version == '' &&
-                                (!contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME))) }}"
-             echo "contains: ${{ contains(needs.Import-commit-pragmas.outputs.pr-repos, format('{0}@', inputs.NAME)) }}"
-             echo "pr-repos: ${{ needs.Import-commit-pragmas.outputs.pr-repos }}"
       # do we actually need a checkout here?
       # - name: Checkout code
       #   uses: actions/checkout@v4
@@ -273,21 +221,6 @@ jobs:
              if ! ${CP_SKIP_BUILD_LEAP15_RPM:-false} && [[ ${distros[@]} =~ leap15 ]]; then
                  l+=('"leap15"')
              fi
-
-  Show-RPM-Build-Conditionals:
-    name: Show RPM Build Conditionals
-    runs-on: [self-hosted, docker]
-    needs: [Create-symlinks, Import-commit-pragmas, Calc-rpm-build-matrix,
-            Import-commit-message]
-    steps:
-      - name: Show RPM Build Conditionals
-        run: |
-             echo "${{ inputs.BRANCH }}"
-             echo "${{ inputs.RUN_GHA }}"
-             echo "${{ needs.Import-commit-pragmas.outputs.run-gha }}"
-             echo "${{ github.event_name }}"
-             echo "${{ needs.Import-commit-pragmas.outputs.skip-build }}"
-             echo "${{ needs.Import-commit-pragmas.outputs.rpm-test-version }}"
 
   Build-RPM:
     name: Build RPM
