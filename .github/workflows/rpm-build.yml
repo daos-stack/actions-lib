@@ -18,6 +18,9 @@ on:
       LEAP15_VERSION:
         type: string
         required: true
+      COVFN_DISABLED:
+        type: boolean
+        default: true
       PACKAGING_DIR:
         type: string
         required: true
@@ -377,6 +380,7 @@ jobs:
                            -e REPO_FILE_URL="$REPO_FILE_URL"                                      \
                            -e JENKINS_URL="$JENKINS_URL"                                          \
                            -e TARGET="$TARGET"                                                    \
+                           -e COVFN_DISABLED="${{ inputs.COVFN_DISABLED }}"
                            mock-build bash -c "$script"
         # yamllint enable rule:line-length
       - name: Build RPM failure log
