@@ -380,7 +380,7 @@ jobs:
                            -e REPO_FILE_URL="$REPO_FILE_URL"                                      \
                            -e JENKINS_URL="$JENKINS_URL"                                          \
                            -e TARGET="$TARGET"                                                    \
-                           -e COVFN_DISABLED="${{ inputs.COVFN_DISABLED }}"
+                           -e COVFN_DISABLED="${{ inputs.COVFN_DISABLED }}"                       \
                            mock-build bash -c "$script"
         # yamllint enable rule:line-length
       - name: Build RPM failure log
@@ -403,7 +403,7 @@ jobs:
         continue-on-error: true
         run: |
              set -eux
-             repo_path="$REPO_PATH$GITHUB_RUN_NUMBER/artifact/artifacts/"
+             repo_path="$REPO_PATH$GITHUB_RUN_NUMBER/artifact/artifacts/${{ !inputs.COVFN_DISABLED && 'bullseye/' }}"
              mkdir -p "$repo_path$TARGET"
              cp -a mock_result/${CHROOT_NAME}/*.rpm "$repo_path$TARGET"
              cd "$repo_path$TARGET"
@@ -413,8 +413,8 @@ jobs:
         if: steps.create-repo.outcome == 'success'
         continue-on-error: true
         run: |
-             dnf --disablerepo=\* --repofrompath                                                 \
-                 testrepo,file://${REPO_PATH}${{ github.run_number }}/artifact/artifacts/$TARGET \
+             dnf --disablerepo=\* --repofrompath                                                                                             \
+                 testrepo,file://${REPO_PATH}${{ github.run_number }}/artifact/artifacts/${{ !inputs.COVFN_DISABLED && 'bullseye/' }}$TARGET \
                  repoquery -a
       - name: Remove lastSuccessfulBuild link and exit failure
         if: steps.test-repo.outcome != 'success'
