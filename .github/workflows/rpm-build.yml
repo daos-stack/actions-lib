@@ -146,7 +146,7 @@ jobs:
     needs: [Import-commit-pragmas]
     if: |
          (inputs.BRANCH != '' ||
-          needs.Import-commit-pragmas.outputs.run-gha ||
+          needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
           inputs.RUN_GHA ||
           github.event_name == 'workflow_dispatch') &&
          needs.Import-commit-pragmas.outputs.rpm-test-version == '' &&
@@ -172,7 +172,9 @@ jobs:
     name: Calculate RPM Build Matrix
     runs-on: [self-hosted, wolf]
     needs: [Import-commit-pragmas, Create-symlinks, Import-commit-message]
-    if: needs.Import-commit-pragmas.outputs.skip-build != 'true'
+    if: |
+        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        needs.Import-commit-pragmas.outputs.skip-build != 'true'
     outputs:
       distros: ${{ steps.distros.outputs.text }}
       matrix: ${{ steps.matrix.outputs.text }}
@@ -237,6 +239,7 @@ jobs:
         distro: ${{ fromJSON(needs.Calc-rpm-build-matrix.outputs.matrix) }}
       fail-fast: false
     if: |
+        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
         needs.Create-symlinks.result == 'success' &&
         ((!cancelled()) || success() || failure())
     env:
