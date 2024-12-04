@@ -282,6 +282,11 @@ jobs:
         with:
           repository: daos-stack/packaging
           path: ${{ inputs.PACKAGING_DIR }}/packaging
+      # this is needed so that the git ls-files that is done to build a tarball doesn't
+      # groan about deleted files
+      - name: Fix up files deleted by updating packaging
+        if: inputs.UPDATE_PACKAGING
+        run: git ls-files -d utils/rpms/packaging/ | xargs touch
       - name: Examine repo
         # yamllint disable rule:line-length
         run: set -x; pwd; ls -l; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
@@ -335,7 +340,7 @@ jobs:
                              --build-arg REPO_FILE_URL=$REPO_FILE_URL                          \
                              --build-arg UID=$(id -u)                                          \
                              --build-arg FVERSION=${{ env.FVERSION }}                          \
-                             --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}              \
+                             --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}/packaging/   \
                              --tag mock-build                                                  \
                             ${{ inputs.PACKAGING_DIR }}
       - name: Build RPM
