@@ -286,7 +286,8 @@ jobs:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
       - name: Set variables
         run: |
-            FVERSION="37"
+            # should typically leave this empty to use latest
+            #FVERSION="37"
             case ${{ matrix.distro }} in
                 'el8')
                     CHROOT_NAME="rocky+epel-8-x86_64"
