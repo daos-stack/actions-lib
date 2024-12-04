@@ -282,6 +282,8 @@ jobs:
         with:
           repository: daos-stack/packaging
           path: ${{ inputs.PACKAGING_DIR }}/packaging
+      - name: Examine repo
+        run: git diff
       - name: Import commit pragmas
         uses: daos-stack/action-import-commit-pragmas@v1
         with:
