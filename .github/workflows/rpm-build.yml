@@ -289,7 +289,7 @@ jobs:
         run: git ls-files -d utils/rpms/packaging/ | xargs -r touch
       - name: Examine repo
         # yamllint disable rule:line-length
-        run: set -x; pwd; ls -l; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
+        run: set -x; pwd; ls -l . ${{ inputs.PACKAGING_DIR }}/; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
       - name: Import commit pragmas
         uses: daos-stack/action-import-commit-pragmas@v1
         with:
