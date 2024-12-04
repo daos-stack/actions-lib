@@ -57,10 +57,14 @@ jobs:
     needs: Variables
     permissions:
       statuses: write
+    strategy:
+        fail-fast: false
+        matrix:
+          repo: [argobots, libfabric, daos]
     uses: ./.github/workflows/rpm-build.yml
     secrets: inherit
     with:
-      NAME: argobots
+      NAME: ${{ matrix.repo }}
       DISTROS: ${{ needs.Variables.outputs.DISTROS }}
       EL8_BUILD_VERSION: ${{ needs.Variables.outputs.EL8_BUILD_VERSION }}
       EL9_BUILD_VERSION: ${{ needs.Variables.outputs.EL9_BUILD_VERSION }}
