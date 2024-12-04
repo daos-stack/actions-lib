@@ -68,3 +68,4 @@ jobs:
       PACKAGING_DIR: ${{ needs.Variables.outputs.PACKAGING_DIR }}
       UPDATE_PACKAGING: true
       BRANCH: master
+      RUN_GHA: true

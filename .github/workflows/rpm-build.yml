@@ -173,7 +173,8 @@ jobs:
     runs-on: [self-hosted, wolf]
     needs: [Import-commit-pragmas, Create-symlinks, Import-commit-message]
     if: |
-        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        (needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
+         inputs.RUN_GHA) &&
         needs.Import-commit-pragmas.outputs.skip-build != 'true'
     outputs:
       distros: ${{ steps.distros.outputs.text }}
@@ -239,7 +240,8 @@ jobs:
         distro: ${{ fromJSON(needs.Calc-rpm-build-matrix.outputs.matrix) }}
       fail-fast: false
     if: |
-        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        (needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
+         inputs.RUN_GHA) &&
         needs.Create-symlinks.result == 'success' &&
         ((!cancelled()) || success() || failure())
     env:
