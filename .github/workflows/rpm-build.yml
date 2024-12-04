@@ -283,7 +283,8 @@ jobs:
           repository: daos-stack/packaging
           path: ${{ inputs.PACKAGING_DIR }}/packaging
       - name: Examine repo
-        run: git diff
+        # yamllint disable rule:line-length
+        run: set -x; git status; git diff; ${{ inputs.NAME == 'daos' && rm -rf packaging/ || true }}; git status
       - name: Import commit pragmas
         uses: daos-stack/action-import-commit-pragmas@v1
         with:
