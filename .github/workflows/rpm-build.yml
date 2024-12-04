@@ -327,14 +327,14 @@ jobs:
              else
                  DOCKER=docker
              fi
-             "$DOCKER" build --file ${{ inputs.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild \
+             "$DOCKER" build --file ${{ vars.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild \
                              --build-arg CACHEBUST=$(date +%s%3N)                              \
                              --build-arg CB0=$(date +%V)                                       \
                              --build-arg REPO_FILE_URL=$REPO_FILE_URL                          \
                              --build-arg UID=$(id -u)                                          \
                              --build-arg FVERSION=${{ env.FVERSION }}                          \
                              --tag mock-build                                                  \
-                            ${{ inputs.PACKAGING_DIR }}
+                            ${{ vars.PACKAGING_DIR }}
       - name: Build RPM
         id: build-rpm
         continue-on-error: true
