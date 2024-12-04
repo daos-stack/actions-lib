@@ -349,7 +349,7 @@ jobs:
                              --build-arg REPO_FILE_URL=$REPO_FILE_URL                          \
                              --build-arg UID=$(id -u)                                          \
                              --build-arg FVERSION=${{ env.FVERSION }}                          \
-                             --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}/packaging/   \
+                             --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}/packaging    \
                              --tag mock-build                                                  \
                             ${{ inputs.PACKAGING_DIR }}
       - name: Build RPM
