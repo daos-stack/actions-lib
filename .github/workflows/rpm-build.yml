@@ -173,7 +173,8 @@ jobs:
     runs-on: [self-hosted, wolf]
     needs: [Import-commit-pragmas, Create-symlinks, Import-commit-message]
     if: |
-        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        (needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
+         inputs.RUN_GHA) &&
         needs.Import-commit-pragmas.outputs.skip-build != 'true'
     outputs:
       distros: ${{ steps.distros.outputs.text }}
@@ -239,7 +240,8 @@ jobs:
         distro: ${{ fromJSON(needs.Calc-rpm-build-matrix.outputs.matrix) }}
       fail-fast: false
     if: |
-        needs.Import-commit-pragmas.outputs.run-gha == 'true' &&
+        (needs.Import-commit-pragmas.outputs.run-gha == 'true' ||
+         inputs.RUN_GHA) &&
         needs.Create-symlinks.result == 'success' &&
         ((!cancelled()) || success() || failure())
     env:
@@ -259,13 +261,13 @@ jobs:
       REPO_FILE_URL: https://artifactory.dc.hpdd.intel.com/artifactory/repo-files/
       RUN_ID: ${{ github.run_id }}
       TARGET: ${{ matrix.distro }}
+      FVERSION: 41
       # keep VS Code's GHA linting happy
       STAGE_NAME:
       DISTRO_NAME:
       DISTRO_VERSION:
       CP_LEAP15_VERSION:
       COMMIT_STATUS_DISTRO_VERSION:
-      FVERSION:
       CHROOT_NAME:
       ACT:
     steps:
@@ -279,14 +281,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: daos-stack/packaging
-          path: packaging
+          path: ${{ inputs.PACKAGING_DIR }}/packaging
+      # this is needed so that the git ls-files that is done to build a tarball doesn't
+      # groan about deleted files
+      - name: Fix up files deleted by updating packaging
+        if: inputs.UPDATE_PACKAGING
+        run: git ls-files -d utils/rpms/packaging/ | xargs -r touch
       - name: Import commit pragmas
         uses: daos-stack/action-import-commit-pragmas@v1
         with:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
       - name: Set variables
         run: |
-            FVERSION="37"
             case ${{ matrix.distro }} in
                 'el8')
                     CHROOT_NAME="rocky+epel-8-x86_64"
@@ -358,7 +364,7 @@ jobs:
                  # probably running in act
                  unique="$RANDOM"
              else
-                 unique="${{ github.run_id }}-${{ github.run_attempt }}"
+                 unique="${{ inputs.NAME }}-${{ github.run_id }}-${{ github.run_attempt }}"
              fi
              if "${ACT:-false}" && command -v podman; then
                  DOCKER=podman
@@ -396,7 +402,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.STAGE_NAME }} logs
+          name: ${{ env.STAGE_NAME }} logs for ${{ inputs.NAME }}
           path: |
             mock_result/${{ env.CHROOT_NAME }}/root.log
             mock_result/${{ env.CHROOT_NAME }}/build.log
