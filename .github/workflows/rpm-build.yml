@@ -289,7 +289,7 @@ jobs:
         run: git ls-files -d utils/rpms/packaging/ | xargs -r touch
       - name: Examine repo
         # yamllint disable rule:line-length
-        run: set -x; pwd; ls -l . ${{ inputs.PACKAGING_DIR }}/; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
+        run: set -x; pwd; ls -l . ${{ inputs.PACKAGING_DIR }}/packaging/; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
       - name: Import commit pragmas
         uses: daos-stack/action-import-commit-pragmas@v1
         with:
@@ -342,7 +342,7 @@ jobs:
                              --build-arg FVERSION=${{ env.FVERSION }}                          \
                              --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}/packaging/   \
                              --tag mock-build                                                  \
-                            ${{ inputs.PACKAGING_DIR }}
+                            ${{ inputs.PACKAGING_DIR }}/packaging/
       - name: Build RPM
         id: build-rpm
         continue-on-error: true
