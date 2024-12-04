@@ -261,13 +261,13 @@ jobs:
       REPO_FILE_URL: https://artifactory.dc.hpdd.intel.com/artifactory/repo-files/
       RUN_ID: ${{ github.run_id }}
       TARGET: ${{ matrix.distro }}
+      FVERSION: "latest"
       # keep VS Code's GHA linting happy
       STAGE_NAME:
       DISTRO_NAME:
       DISTRO_VERSION:
       CP_LEAP15_VERSION:
       COMMIT_STATUS_DISTRO_VERSION:
-      FVERSION:
       CHROOT_NAME:
       ACT:
     steps:
@@ -288,8 +288,6 @@ jobs:
           commit-message: ${{ needs.Import-commit-message.outputs.dequoted-message }}
       - name: Set variables
         run: |
-            # should typically leave this empty to use latest
-            #FVERSION="37"
             case ${{ matrix.distro }} in
                 'el8')
                     CHROOT_NAME="rocky+epel-8-x86_64"
