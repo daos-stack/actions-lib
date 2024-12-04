@@ -350,7 +350,7 @@ jobs:
                              --build-arg FVERSION=${{ env.FVERSION }}                          \
                              --build-arg PACKAGINGDIR=${{ inputs.PACKAGING_DIR }}/packaging/   \
                              --tag mock-build                                                  \
-                            ${{ inputs.PACKAGING_DIR }}/packaging/
+                            ${{ inputs.PACKAGING_DIR }}
       - name: Build RPM
         id: build-rpm
         continue-on-error: true
