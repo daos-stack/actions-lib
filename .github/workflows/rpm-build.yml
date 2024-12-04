@@ -334,6 +334,13 @@ jobs:
              else
                  DOCKER=docker
              fi
+             pwd
+             ls -l . ${{ inputs.PACKAGING_DIR }}/packaging/
+             ed ${{ inputs.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild <<EOF
+             /ARG PACKAGINGDIR=packaging/a
+             RUN echo ${PACKAGINGDIR}; ls -l ${PACKAGINGDIR} || true
+             wq
+             EOF
              "$DOCKER" build --file ${{ inputs.PACKAGING_DIR }}/packaging/Dockerfile.mockbuild \
                              --build-arg CACHEBUST=$(date +%s%3N)                              \
                              --build-arg CB0=$(date +%V)                                       \
