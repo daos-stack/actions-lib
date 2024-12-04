@@ -23,7 +23,8 @@ on:
         default: true
       PACKAGING_DIR:
         type: string
-        required: true
+        required: false
+        default: ${{ vars.PACKAGING_DIR }}
       # allow the caller to decide to run in GHA or not
       RUN_GHA:
         type: boolean
@@ -359,7 +360,7 @@ jobs:
                  # probably running in act
                  unique="$RANDOM"
              else
-                 unique="${{ github.run_id }}-${{ github.run_attempt }}"
+                 unique="${{ inputs.NAME }}-${{ github.run_id }}-${{ github.run_attempt }}"
              fi
              if "${ACT:-false}" && command -v podman; then
                  DOCKER=podman
