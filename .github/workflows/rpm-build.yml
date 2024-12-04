@@ -286,7 +286,7 @@ jobs:
       # groan about deleted files
       - name: Fix up files deleted by updating packaging
         if: inputs.UPDATE_PACKAGING
-        run: git ls-files -d utils/rpms/packaging/ | xargs touch
+        run: git ls-files -d utils/rpms/packaging/ | xargs -r touch
       - name: Examine repo
         # yamllint disable rule:line-length
         run: set -x; pwd; ls -l; git status; git diff; [ "${{ inputs.NAME }}" = "daos" ] && echo rm -rf packaging/ || true; git status
