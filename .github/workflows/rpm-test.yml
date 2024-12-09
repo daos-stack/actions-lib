@@ -34,10 +34,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # no GHA support on this branch: branch: [master, release/2.4]
-        # DO NOT LAND - using PR as master for now
-        # branch: [master]
-        branch: [bmurrell/gha-refactor]
+        # ideally we want to test on both master and release/* but there is no
+        # GHA support on the release/2.6 branch yet
+        # branch: [master, release/2.6]
+        branch: [master]
     env:
       PR_REPO: >-
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
