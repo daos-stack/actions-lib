@@ -176,8 +176,9 @@ jobs:
       - name: Debug
         run: |
           echo '${{ needs.Import-commit-pragmas.outputs.run-gha }}'
-          echo '${{ needs.Import-commit-pragmas.outputs.run-gha == 'true' }}
+          echo '${{ needs.Import-commit-pragmas.outputs.run-gha == 'true' }}'
           echo '${{ inputs.RUN_GHA }}'
+          echo "${{ needs.Import-commit-pragmas.outputs.skip-build}}"
 
   Calc-rpm-build-matrix:
     name: Calculate RPM Build Matrix
