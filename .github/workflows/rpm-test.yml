@@ -64,7 +64,7 @@ jobs:
                             "commit-message": "Override commit pragmas",
                             "test-tag": "load_mpi test_core_files ${{ inputs.TEST_TAG }}",
                             "functional-test-distros": "${{ inputs.DISTROS }}",
-                            "run-gha:" "${{ inputs.RUN_GHA }}"
+                            "run-gha": "${{ inputs.RUN_GHA }}"
                            }'
           propagate_failure: true
       # TODO: investigate how cancelling this can cancel the downstream job
