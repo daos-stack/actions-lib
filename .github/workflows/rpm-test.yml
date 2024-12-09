@@ -60,16 +60,11 @@ jobs:
           # TODO: rpm-test-version of course needs to either be the latest
           #       version, or better yet, no version and it installs the latest
           #       version
-          client_payload: '{"pr-repos":
-                              "${{ env.PR_REPO }}",
-                            "commit-message":
-                              "Override commit pragmas",
-                            "test-tag":
-                              "load_mpi test_core_files ${{ inputs.TEST_TAG }}",
-                            "functional-test-distros":
-                              "${{ inputs.DISTROS }}"
-                            "run-gha:"
-                              "${{ inputs.RUN_GHA }}"
+          client_payload: '{"pr-repos": "${{ env.PR_REPO }}",
+                            "commit-message": "Override commit pragmas",
+                            "test-tag": "load_mpi test_core_files ${{ inputs.TEST_TAG }}",
+                            "functional-test-distros": "${{ inputs.DISTROS }}",
+                            "run-gha:" "${{ inputs.RUN_GHA }}"
                            }'
           propagate_failure: true
       # TODO: investigate how cancelling this can cancel the downstream job
