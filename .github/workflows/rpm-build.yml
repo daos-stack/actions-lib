@@ -168,18 +168,6 @@ jobs:
              ln -s ${{ github.run_number }} ${REPO_PATH}lastBuild
              ln -s ${{ github.run_number }} ${REPO_PATH}lastSuccessfulBuild
 
-  Debug:
-    name: Debug
-    runs-on: [self-hosted, light]
-    needs: [Import-commit-pragmas]
-    steps:
-      - name: Debug
-        run: |
-          echo '${{ needs.Import-commit-pragmas.outputs.run-gha }}'
-          echo '${{ needs.Import-commit-pragmas.outputs.run-gha == 'true' }}'
-          echo '${{ inputs.RUN_GHA }}'
-          echo "${{ needs.Import-commit-pragmas.outputs.skip-build}}"
-
   Calc-rpm-build-matrix:
     name: Calculate RPM Build Matrix
     runs-on: [self-hosted, wolf]
