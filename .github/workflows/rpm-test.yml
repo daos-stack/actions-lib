@@ -37,7 +37,9 @@ jobs:
         # ideally we want to test on both master and release/* but there is no
         # GHA support on the release/2.6 branch yet
         # branch: [master, release/2.6]
-        branch: [master]
+        # until https://github.com/daos-stack/daos/pull/15576 lands
+        # branch: [master]
+        branch: [bmurrell/propagate-gha-run]
     env:
       PR_REPO: >-
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
@@ -66,6 +68,8 @@ jobs:
                               "load_mpi test_core_files ${{ inputs.TEST_TAG }}",
                             "functional-test-distros":
                               "${{ inputs.DISTROS }}"
+                            "run-gha:"
+                              "${{ inputs.RUN_GHA }}"
                            }'
           propagate_failure: true
       # TODO: investigate how cancelling this can cancel the downstream job
