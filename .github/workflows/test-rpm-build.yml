@@ -72,5 +72,5 @@ jobs:
       UPDATE_PACKAGING: true
       PACKAGING_DIR: ${{ matrix.repo == 'daos' && 'utils/rpms' ||
                          needs.Variables.outputs.PACKAGING_DIR }}
-      BRANCH:  ${{ matrix.repo == 'daos' && 'bmurrell/gha-refactor' || 'master' }}
+      BRANCH:  master
       RUN_GHA: true
