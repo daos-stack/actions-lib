@@ -37,9 +37,7 @@ jobs:
         # ideally we want to test on both master and release/* but there is no
         # GHA support on the release/2.6 branch yet
         # branch: [master, release/2.6]
-        # until https://github.com/daos-stack/daos/pull/15576 lands
-        # branch: [master]
-        branch: [bmurrell/propagate-gha-run]
+        branch: [master]
     env:
       PR_REPO: >-
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
