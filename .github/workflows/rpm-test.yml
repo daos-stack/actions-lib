@@ -34,7 +34,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        branch: [master, release/2.6]
+        # branch: [master, release/2.6]
+        branch: [master, bmurrell/release-2.6-gha]
     env:
       PR_REPO: >-
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
