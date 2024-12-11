@@ -40,7 +40,10 @@ jobs:
         ${{ inputs.NAME }}@PR-${{ github.event.pull_request.number }}:${{ github.run_number }}
     steps:
       - name: Test RPMs with DAOS
-        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        # uses: convictional/trigger-workflow-and-wait@v1.6.5
+        # a fork that more accurately finds the downstream runs
+        # https://github.com/convictional/trigger-workflow-and-wait/pull/102
+        uses: brianjmurrell/trigger-workflow-and-wait@filter-workflows
         with:
           owner: daos-stack
           repo: daos
@@ -66,3 +69,4 @@ jobs:
       - name: Cleanup downstream jobs
         if: cancelled()
         run: echo "Cancelling downstream jobs (but how?)"
+        # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#cancel-a-workflow-run
