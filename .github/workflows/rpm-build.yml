@@ -246,7 +246,7 @@ jobs:
         ((!cancelled()) || success() || failure())
     env:
       ARTIFACTORY_URL: https://artifactory/
-      DAOS_EMAIL: brian.murrell@intel.com
+      DAOS_EMAIL: core-daos-devops@groups.int.hpe.com
       DAOS_FULLNAME: daos-stack
       DISTRO: ${{ matrix.distro }}
       DISTRO_REPOS: disabled
