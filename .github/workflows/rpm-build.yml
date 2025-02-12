@@ -245,7 +245,7 @@ jobs:
         needs.Create-symlinks.result == 'success' &&
         ((!cancelled()) || success() || failure())
     env:
-      ARTIFACTORY_URL: https://artifactory.dc.hpdd.intel.com/
+      ARTIFACTORY_URL: https://artifactory/
       DAOS_EMAIL: brian.murrell@intel.com
       DAOS_FULLNAME: daos-stack
       DISTRO: ${{ matrix.distro }}
